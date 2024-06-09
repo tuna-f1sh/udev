@@ -89,7 +89,9 @@ impl LineBuf {
             (0, 0)
         };
 
-        self.add(&prefix[start..end])?;
+        if start <= prefix.len() && end <= prefix.len() {
+            self.add(&prefix[start..end])?;
+        }
 
         for child in entry.children().iter() {
             self.add_char(child.c())?;
