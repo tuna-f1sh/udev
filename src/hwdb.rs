@@ -244,7 +244,7 @@ impl UdevHwdb {
             if prefix_off > 0 {
                 for (p, c) in trie_string(hwdb_buf, prefix_off).chars().enumerate() {
                     if c == '*' || c == '?' || c == '[' {
-                        return line_buf.trie_fnmatch(list, hwdb_buf, &n, p, search);
+                        return line_buf.trie_fnmatch(list, hwdb_buf, &n, p, &search[i + p..]);
                     }
                     let i = i.saturating_add(p);
                     if search_count > i && Some(c) != search.chars().nth(i) {
