@@ -2,6 +2,7 @@ use std::io::{self, Read};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::{env, fs, mem};
+use std::collections::linked_list::Iter;
 
 use crate::{Error, Result, Udev, UdevEntry, UdevList};
 
@@ -151,7 +152,7 @@ impl UdevHwdb {
         &self.head
     }
 
-    /// Looks up a matching device in the hardware database.
+    /// Looks up a matching device in the hardware database and populates property list.
     ///
     /// Parameters:
     ///
@@ -166,8 +167,8 @@ impl UdevHwdb {
     /// of a list of retrieved properties is returned.
     /// ```
     ///
-    /// Returns: an optional reference to an [UdevEntry].
-    pub fn get_properties_list_entry(&mut self, modalias: &str, _flags: u32) -> Option<&UdevEntry> {
+    /// Returns: an iterator of [UdevEntry]s for device.
+    pub fn get_properties_list_entry(&mut self, modalias: &str, _flags: u32) -> Result<Iter<UdevEntry>> {
         // For now, do the naive thing, and read the entire HWDB into memory (12M+!!!)
         //
         // Using the BufReader to jump around to all the various offsets will probably be
@@ -184,18 +185,17 @@ impl UdevHwdb {
         // HWDB while we are parsing it.
         let file = fs::OpenOptions::new()
             .read(true)
-            .open(&self.hwdb_path)
-            .map_err(|err| {
+            .open(&self.hwdb_path).map_err(|err| {
                 log::warn!("unable to open HWDB file: {err}");
-            })
-            .ok()?;
+                Error::UdevHwdb("unable to open HWDB file".into())
+            })?;
 
         let metadata = file
             .metadata()
             .map_err(|err| {
-                log::warn!("unable to get HWDB metadata: {err}");
-            })
-            .ok()?;
+                log::error!("unable to get HWDB metadata: {err}");
+                Error::UdevHwdb("unable to get HWDB metadata".into())
+            })?;
 
         let file_len = metadata.len() as usize;
 
@@ -206,18 +206,18 @@ impl UdevHwdb {
             .read_to_end(&mut hwdb_buf)
             .map_err(|err| {
                 log::warn!("error reading HWDB into memory: {err}");
-            })
-            .ok()?;
+                Error::UdevHwdb("error reading HWDB into memory".into())
+            })?;
 
         self.properties_list.clear();
 
         Self::trie_search(&mut self.properties_list, &self.head, &hwdb_buf, modalias)
             .map_err(|err| {
                 log::warn!("error looking up property list UdevEntry: {err}");
-            })
-            .ok()?;
+                Error::UdevHwdb("error looking up property list UdevEntry".into())
+            })?;
 
-        self.properties_list.entry()
+        Ok(self.properties_list.iter())
     }
 
     /// Gets a reference to the [properties list](UdevList).

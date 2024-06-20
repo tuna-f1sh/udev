@@ -960,14 +960,14 @@ pub fn udev_hwdb_get_properties_list_entry<'h>(
     hwdb: &'h mut UdevHwdb,
     modalias: &str,
     flags: u32,
-) -> Option<&'h UdevEntry> {
-    hwdb.get_properties_list_entry(modalias, flags)
+) -> Result<Option<&'h UdevEntry>> {
+    hwdb.get_properties_list_entry(modalias, flags).map(|mut i| i.next())
 }
 
 /// Looks up a matching device modalias in the hardware database and returns the list of properties.
 pub fn udev_hwdb_query<'h>(hwdb: &'h mut UdevHwdb, modalias: &str) -> Option<&'h UdevList> {
     // populate list if modalias is present and return
-    if hwdb.get_properties_list_entry(modalias, 0).is_some() {
+    if hwdb.get_properties_list_entry(modalias, 0).is_ok() {
         Some(hwdb.properties_list())
     } else {
         None

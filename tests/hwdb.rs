@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use udevrs::{Error, Result, Udev, UdevHwdb};
+use udevrs::{Result, Udev, UdevHwdb};
 
 mod common;
 
@@ -12,16 +12,10 @@ fn parse_hwdb() -> Result<()> {
     let udev = Arc::new(Udev::new());
 
     let mut hwdb = UdevHwdb::new(udev)?;
-
-    let _ = hwdb
-        .get_properties_list_entry("usb:v1D6Bp0001", 0)
-        .ok_or(Error::UdevHwdb("no matching entry found".into()))?;
-
     let exp = ("ID_VENDOR_FROM_DATABASE", "Linux Foundation");
 
     let found = hwdb
-        .properties_list()
-        .iter()
+        .get_properties_list_entry("usb:v1D6Bp0001", 0)?
         .find(|e| e.value() == "Linux Foundation")
         .map(|e| (e.name(), e.value()));
 
